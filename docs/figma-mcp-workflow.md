@@ -149,7 +149,26 @@ npm run inline emails/templates/[filename].html
 npm run test-send emails/templates/[filename].inlined.html
 ```
 
-### Step 7: Test in Real Email Clients
+### Step 7: Visual Validation (Optional but Recommended)
+
+**NEW:** Automatic visual validation using DevTools MCP!
+
+Request validation to ensure 1:1 accuracy:
+```
+"Generate email from Figma and validate it matches 1:1"
+```
+
+Cursor will automatically:
+- Capture Figma design screenshot
+- Open HTML in browser
+- Capture rendered screenshot
+- Compare visually
+- Iterate to fix differences
+- Report final status
+
+**See:** `visual-validation-workflow.md` for complete details.
+
+### Step 8: Test in Real Email Clients
 
 Send test emails to verify rendering:
 

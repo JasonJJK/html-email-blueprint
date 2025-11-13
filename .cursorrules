@@ -8,7 +8,11 @@ These rules automatically apply when:
 - User mentions email components: "email footer", "email header", "email newsletter", "email signature", "CTA button for email"
 - Any file is being created/edited in the `emails/` directory
 
-## Figma MCP Integration
+## Design Input Methods
+
+This blueprint supports TWO methods for design input:
+
+### Method 1: Figma MCP Integration
 
 When a Figma URL or node ID is provided:
 
@@ -35,6 +39,174 @@ When a Figma URL or node ID is provided:
    - Map Figma auto-layout → table cell padding/spacing
    - Convert any CSS that won't work in email clients
 
+### Method 2: Image File Input (PNG/JPG/Screenshot)
+
+When a PNG, JPG, or screenshot file is provided:
+
+1. **Accept Image Input**:
+   - User provides image file path: `emails/designs/footer-design.png`
+   - Or user attaches/uploads image in chat
+   - Supported formats: PNG, JPG, JPEG, WebP
+
+2. **Analyze Image Visually**:
+   - Identify layout structure (header, content sections, footer)
+   - Detect colors (backgrounds, text, borders) from visible elements
+   - Estimate typography (relative sizes, weights)
+   - Measure spacing and alignment visually
+   - Identify components (buttons, images, text blocks)
+   - Note overall dimensions (ideal: 600px width for email)
+
+3. **Generate HTML from Visual Analysis**:
+   - Create table-based structure matching layout
+   - Apply detected colors as hex values
+   - Use web-safe fonts with appropriate sizes
+   - Implement spacing based on visual proportions
+   - Build email-safe components (table-based buttons, etc.)
+
+4. **Use Image as Validation Reference**:
+   - The provided image serves as the "target design"
+   - During visual validation, compare against this image instead of Figma screenshot
+   - Iterate until generated HTML matches the provided image
+
+5. **Note Limitations**:
+   - Text content may need to be provided separately (if not clearly visible in image)
+   - Exact font families must be inferred (use web-safe alternatives)
+   - Colors are estimated from image (may need user confirmation for brand accuracy)
+   - Spacing is proportional (exact pixel values may vary)
+
+**Example prompts:**
+```
+"Create email footer from this design: emails/designs/footer.png"
+"Generate email template based on this screenshot: /path/to/design.jpg"
+"Build email matching this image" [attach image]
+```
+
+## Visual Validation with DevTools MCP
+
+**CRITICAL**: After generating HTML from any design source (Figma OR image), **ALWAYS attempt automatic visual validation** to ensure 1:1 accuracy.
+
+### Mandatory Validation Workflow:
+
+**After every design → HTML generation, automatically execute this workflow:**
+
+1. **Generate HTML from design**
+   - **If Figma:** Extract design data via Figma MCP
+   - **If Image:** Analyze image visually for layout, colors, typography
+   - Create email-safe HTML following all rules below
+   - Save to appropriate directory (`emails/components/` or `emails/templates/`)
+
+2. **Check DevTools MCP availability**
+   - Attempt to access DevTools MCP tools
+   - If DevTools MCP is NOT available:
+     - Skip validation and inform user: "⚠️  DevTools MCP not available - skipping visual validation"
+     - Continue without validation
+   - If DevTools MCP IS available:
+     - Proceed with automatic validation (steps 3-8)
+
+3. **Capture reference screenshot**
+   - **If Figma source:** Use `mcp_Figma_Desktop_get_screenshot` to capture the original design
+   - **If Image source:** Use the provided image file as reference
+   - This is the reference/target for comparison
+   - Store for comparison
+
+4. **Open HTML in browser**
+   - Use `mcp_brave-devtools_navigate_page` to load the generated HTML file
+   - Use file:// protocol with absolute path
+   - Example: `file:///Users/.../html-email-blueprint/emails/components/footer.html`
+   - Construct absolute path based on workspace location
+
+5. **Capture rendered HTML screenshot**
+   - Use `mcp_brave-devtools_take_screenshot` with `fullPage: true`
+   - Capture the entire rendered email
+   - Store for comparison
+
+6. **Visual comparison analysis**
+   - Compare Figma screenshot vs HTML screenshot side-by-side
+   - Check for discrepancies:
+     - Layout differences (spacing, alignment, positioning)
+     - Color mismatches (backgrounds, text, borders - use hex values)
+     - Typography issues (font sizes, weights, line heights)
+     - Missing or incorrect elements
+     - Spacing/padding inaccuracies (measure pixel differences)
+     - Border-radius, borders, shadows (if applicable)
+   - List ALL specific differences found
+
+7. **Iterate until 1:1 match**
+   - If differences found:
+     - Analyze the HTML code
+     - Identify specific issues with exact values (e.g., "padding is 20px but should be 32px", "color is #1a66ff but should be #1a66ff")
+     - Update the HTML file with corrections
+     - Save the corrected file
+     - Repeat steps 4-6 (re-open, re-screenshot, re-compare)
+   - Continue iterating until design matches 1:1
+   - Maximum 3 iterations before asking user: "Design is close but not perfect after 3 iterations. Continue iterating or accept current state?"
+
+8. **Validation complete**
+   - Confirm the HTML matches Figma design visually (1:1)
+   - Note any intentional differences (e.g., email client limitations like border-radius in Outlook)
+   - Provide detailed validation report with both screenshots
+
+### DevTools MCP Commands:
+
+**Check if browser is available:**
+```
+mcp_brave-devtools_list_pages()
+```
+If this fails, DevTools MCP is not available - skip validation.
+
+**Navigate to HTML file:**
+```
+mcp_brave-devtools_navigate_page(
+  type: "url",
+  url: "file:///absolute/path/to/file.html"
+)
+```
+
+**Take full-page screenshot:**
+```
+mcp_brave-devtools_take_screenshot(
+  fullPage: true,
+  format: "png"
+)
+```
+
+**Get page snapshot (for debugging layout issues):**
+```
+mcp_brave-devtools_take_snapshot()
+```
+
+### User Can Skip Validation:
+
+If user explicitly requests to skip:
+- "Generate email without validation"
+- "Skip validation"
+- "Quick generation"
+
+Then skip steps 2-8 and inform: "✓ Skipped visual validation as requested"
+
+### Reporting Results:
+
+After validation, always provide:
+```
+✅ Visual Validation Complete
+──────────────────────────────────────
+Figma Design:     [Screenshot displayed]
+Rendered HTML:    [Screenshot displayed]
+──────────────────────────────────────
+Comparison:       PERFECT MATCH / MINOR DIFFERENCES / NEEDS ADJUSTMENT
+Issues Found:     [number] ([status: fixed/remaining])
+Iterations:       [N attempts]
+Final Status:     Ready for production / Needs review / Email limitations noted
+──────────────────────────────────────
+Details:
+- Layout:       ✓ Match / ✗ [specific issue]
+- Colors:       ✓ Match / ✗ [specific issue]
+- Typography:   ✓ Match / ✗ [specific issue]
+- Spacing:      ✓ Match / ✗ [specific issue]
+- Elements:     ✓ All present / ✗ [specific issue]
+──────────────────────────────────────
+```
+
 ## HTML Email Generation Rules
 
 **CRITICAL**: Every HTML email must be production-ready and compatible with:
@@ -44,14 +216,62 @@ When a Figma URL or node ID is provided:
 - Android mail clients
 - Legacy email clients
 
-### 1. Output Format
+### 1. Output Format - Component vs Full Template Detection
 
-Always generate a **complete HTML document**:
-- Start with `<!DOCTYPE html>`
-- Include complete `<html>`, `<head>`, and `<body>` tags
-- Self-contained: no external CSS, JS, or fonts
-- HTML only (no text version)
-- Save generated files to `emails/templates/` (full emails) or `emails/components/` (reusable parts)
+**IMPORTANT**: Determine if generating a **component** or **full template** based on user request:
+
+#### Generate COMPONENT ONLY (no DOCTYPE, no <head>) when:
+- User mentions: "footer", "header", "button", "CTA", "signature", "banner", "divider", "spacer"
+- Request is for a "component", "section", "block", "module", "part"
+- Saving to `emails/components/` directory
+- User says "just the footer" or "only the header"
+- It's a reusable piece meant to be inserted into templates
+
+**Component output structure:**
+```html
+<!-- Email Component: [Component Name] -->
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+  <tr>
+    <td>
+      <!-- Component content here -->
+    </td>
+  </tr>
+</table>
+```
+
+**Save to:** `emails/components/[component-name].html`
+
+#### Generate FULL TEMPLATE (with DOCTYPE, <head>, <body>) when:
+- User mentions: "email", "newsletter", "template", "campaign", "announcement"
+- Request is for "complete email", "full email", "entire email"
+- Saving to `emails/templates/` directory
+- It's a standalone, sendable email
+
+**Full template structure:**
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>[Email Subject]</title>
+  <style type="text/css">
+    /* Resets and media queries */
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f3f3f3;">
+  <!-- Full email structure -->
+</body>
+</html>
+```
+
+**Save to:** `emails/templates/[template-name].html`
+
+#### When Uncertain:
+- If it could be either, ask: "Should this be a reusable component or a complete email template?"
+- Default to **component** if user says "create footer/header/button"
+- Default to **full template** if user says "create email/newsletter"
 
 ### 2. General Constraints
 
@@ -157,13 +377,38 @@ Every email MUST follow this exact pattern:
 
 **Every `<img>` must have**:
 - `src` with absolute URL (https://)
-- `alt` attribute (required for accessibility)
+- `alt` attribute (required for accessibility - see Alt Text Requirements below)
 - `width` and `height` attributes (explicit dimensions)
 - `style="display:block; border:0;"` (prevent spacing issues)
 
 Example:
 ```html
-<img src="https://example.com/image.jpg" alt="Description" width="600" height="300" style="display:block; width:100%; max-width:600px; height:auto; border:0;">
+<img src="https://example.com/image.jpg" alt="Descriptive text of image content" width="600" height="300" style="display:block; width:100%; max-width:600px; height:auto; border:0;">
+```
+
+**Alt Text Requirements (CRITICAL for accessibility and image blocking)**:
+- **Be descriptive**: Not just "image" or a name, but describe what the image shows
+- **Profile photos**: "Portrait of [Name]" or "Photo of [Name], [Title]"
+- **Icons**: "Follow us on LinkedIn" not just "LinkedIn"
+- **Decorative images**: Use `alt=""` (empty) for purely decorative images
+- **Logo images**: Use company/brand name
+- **Product images**: Describe the product
+- **Charts/graphs**: Briefly describe the data shown
+- **Images are often blocked**: Alt text should convey the message even when image doesn't load
+
+**Good alt text examples**:
+```html
+<!-- Profile photo -->
+<img src="profile.jpg" alt="Portrait of Simon Garfunkle, Director of Staff" width="150" height="150">
+
+<!-- Social icon -->
+<img src="linkedin-icon.png" alt="Follow us on LinkedIn" width="20" height="20">
+
+<!-- Logo -->
+<img src="logo.png" alt="iN2MARKETS logo" width="200" height="60">
+
+<!-- Hero image -->
+<img src="hero.jpg" alt="Person standing on beach terrace overlooking ocean at sunset" width="600" height="300">
 ```
 
 ### 7. Buttons/CTAs
@@ -191,25 +436,36 @@ Example:
 
 ### 8. Responsive Design
 
-**Use media queries in `<style>` block**:
+**CRITICAL**: Every multi-column layout MUST be responsive and stack properly on mobile devices.
+
+**Required media queries in `<style>` block**:
 ```css
 @media only screen and (max-width: 600px) {
   .container { width: 100% !important; }
-  .mobile-padding { padding: 10px !important; }
+  .mobile-padding { padding: 15px !important; }
+  .mobile-stack { display: block !important; width: 100% !important; }
   .hide-mobile { display: none !important; }
 }
 ```
 
-**Apply classes to tables/cells**:
+**Apply classes to ALL multi-column tables/cells**:
 ```html
 <table class="container" ...>
 <td class="mobile-padding" ...>
+<td class="mobile-stack" ...>  <!-- REQUIRED for any column that should stack on mobile -->
 ```
 
+**Mobile stacking requirements**:
+- ANY `<td>` with a fixed width that's part of a multi-column layout MUST have `class="mobile-stack"`
+- This includes: side-by-side images, text columns, contact info columns, icon groups
+- On mobile, these will stack vertically at 100% width
+
 **Mobile-friendly practices**:
-- Use `max-width:600px;` on main container
-- Stack columns on mobile by using `width:100% !important;`
+- Use `max-width:600px;` on main container (required)
+- Stack columns on mobile by using `width:100% !important;` via `.mobile-stack` class
 - Increase touch target sizes (min 44x44px for buttons)
+- Reduce padding on mobile with `.mobile-padding` class
+- Test all layouts at 320px width (smallest mobile screen)
 
 ### 9. Colors and Backgrounds
 
@@ -234,7 +490,7 @@ Example:
 </tr>
 ```
 
-### 11. Text Content
+### 11. Text Content and Typography
 
 **Use web-safe fonts**:
 - Primary: Arial, Helvetica, sans-serif
@@ -248,7 +504,97 @@ Example:
 </td>
 ```
 
-### 12. Testing Checklist (Post-Generation)
+**Heading tags (`<h1>`, `<h2>`, etc.) - USE WITH CAUTION**:
+- Heading tags can behave unpredictably in email clients (unexpected margins, line-height)
+- **Always include inline styles** to override default browser styles:
+  ```html
+  <h1 style="margin:0 0 20px 0; font-family:Arial, sans-serif; font-size:28px; line-height:36px; color:#333333; font-weight:bold;">
+    Your Headline
+  </h1>
+  ```
+- **Alternative approach**: Use `<p>` tags with bold styling for more predictable rendering:
+  ```html
+  <p style="margin:0 0 20px 0; font-family:Arial, sans-serif; font-size:28px; line-height:36px; color:#333333; font-weight:bold;">
+    Your Headline
+  </p>
+  ```
+- For maximum compatibility, prefer `<p>` + bold over semantic heading tags
+- Always reset margins explicitly: `margin:0 0 20px 0;` (not just `margin:0;`)
+
+### 12. Links - Phone, Email, and URLs
+
+**Telephone links - CRITICAL FORMAT**:
+- **NEVER include spaces or formatting** in the `href` attribute
+- Format: `tel:+[country code][number]` with NO spaces, dashes, or parentheses
+- Display text CAN have formatting for readability
+
+**WRONG** (breaks in many email clients):
+```html
+<a href="tel:034 123 456 78">034 123 456 78</a>
+<a href="tel:+31 6 123 456 78">+31 6 123 456 78</a>
+```
+
+**CORRECT**:
+```html
+<a href="tel:+323412345678" style="color:#333333; text-decoration:none;">034 123 456 78</a>
+<a href="tel:+31612345678" style="color:#333333; text-decoration:none;">+31 6 123 456 78</a>
+```
+
+**Email links**:
+```html
+<a href="mailto:info@company.com" style="color:#0066cc; text-decoration:underline;">info@company.com</a>
+```
+
+**Web links**:
+- Always use `target="_blank"` for external links
+- Always style links explicitly (color, text-decoration)
+```html
+<a href="https://example.com" target="_blank" style="color:#0066cc; text-decoration:underline;">Visit Website</a>
+```
+
+### 13. Color Contrast and Accessibility
+
+**CRITICAL**: Ensure sufficient color contrast for readability, especially when images are blocked.
+
+**Minimum contrast ratios** (WCAG 2.1 guidelines):
+- Normal text (< 18px): 4.5:1 contrast ratio
+- Large text (≥ 18px): 3:1 contrast ratio
+- Interactive elements (links, buttons): 3:1 against background
+
+**Common contrast issues to avoid**:
+- ❌ Light gray text (#666666) on light gray background (#e8e8e8) - POOR contrast
+- ❌ Light text on light background
+- ❌ Medium gray (#999) on white for body text
+
+**Better color choices**:
+- ✅ Dark gray (#333333) or darker on light backgrounds
+- ✅ Dark teal (#2d5555) on white - good contrast
+- ✅ White text on dark backgrounds (#2d5555, #333333)
+- ✅ Black (#000000) on white - maximum contrast
+
+**Example with good contrast**:
+```html
+<!-- Body text on white background -->
+<td bgcolor="#ffffff" style="background-color:#ffffff;">
+  <p style="margin:0; font-family:Arial, sans-serif; font-size:16px; line-height:24px; color:#333333;">
+    Text content here
+  </p>
+</td>
+
+<!-- Footer text on dark background -->
+<td bgcolor="#2d5555" style="background-color:#2d5555;">
+  <p style="margin:0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#ffffff;">
+    Footer text here
+  </p>
+</td>
+```
+
+**Testing contrast**:
+- Use online tools: WebAIM Contrast Checker, Coolors contrast checker
+- Test with images blocked to ensure text is still readable
+- Avoid #666666 or lighter on backgrounds lighter than #ffffff
+
+### 14. Testing Checklist (Post-Generation)
 
 After generating HTML email, remind user to:
 1. Run validation: `npm run validate emails/templates/[filename].html`
@@ -257,8 +603,11 @@ After generating HTML email, remind user to:
 4. Test in multiple clients (Outlook, Gmail, Apple Mail)
 5. Check mobile rendering
 6. Verify all links work and open in new tabs
+7. Verify telephone links work (no spaces in href)
+8. Check color contrast with online tools
+9. Test with images blocked to verify alt text
 
-### 13. Common Patterns
+### 15. Common Patterns
 
 **Header section**:
 ```html
@@ -297,11 +646,17 @@ After generating HTML email, remind user to:
 
 ## Workflow Summary
 
-1. **User provides Figma URL/node ID** → Extract design with Figma MCP tools
-2. **Analyze design data** → Extract colors, fonts, spacing, layout structure
-3. **Generate HTML email** → Follow all rules above, use table-based structure
-4. **Save to appropriate directory** → `emails/templates/` or `emails/components/`
-5. **Remind user to validate and test** → Run npm scripts for validation/testing
+1. **User provides design source** → Figma URL/node ID OR image file (PNG/JPG)
+2. **Extract/analyze design data** → 
+   - Figma: Extract via MCP tools
+   - Image: Analyze visually (colors, layout, typography, spacing)
+3. **Determine output type** → Component (no DOCTYPE) or Full Template (with DOCTYPE)
+4. **Generate HTML email** → Follow all rules above, use table-based structure
+5. **Save to appropriate directory** → `emails/templates/` or `emails/components/`
+6. **AUTOMATIC: Check DevTools MCP availability** → Test if browser tools are accessible
+7. **AUTOMATIC: Visual validation (if DevTools available)** → Compare design vs HTML screenshots, iterate until 1:1
+8. **Report results** → Provide validation status with screenshots and any issues found
+9. **Remind user of next steps** → Run npm scripts for final validation/testing/sending
 
 ## File Naming Convention
 

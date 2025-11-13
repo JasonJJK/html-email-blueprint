@@ -5,7 +5,8 @@ An automated workflow for generating production-ready HTML email templates direc
 ## Overview
 
 This blueprint provides:
-- **Automated HTML email generation** from Figma designs via MCP (Model Context Protocol)
+- **Automated HTML email generation** from Figma designs via MCP OR image files (PNG/JPG)
+- **Visual validation with DevTools MCP** - automatic screenshot comparison to ensure 1:1 design accuracy
 - **Built-in email compatibility rules** that automatically enforce Outlook/Gmail/iOS Mail best practices
 - **Build tools** for CSS inlining, validation, and test email sending
 - **Zero configuration** - just open in Cursor and start working
@@ -48,6 +49,17 @@ https://figma.com/design/abc123/Email?node-id=1-2
 Create an email footer from the currently selected Figma component
 ```
 
+**From image file (PNG/JPG/screenshot):**
+```
+Create email footer from this design: emails/designs/footer.png
+```
+
+**From attached image:**
+```
+[Attach image in chat]
+Generate HTML email matching this design
+```
+
 **Build a specific component:**
 ```
 Create a responsive email header with logo and navigation links
@@ -55,20 +67,71 @@ based on the Figma design at node 1:2
 ```
 
 That's it! Cursor will:
-1. Extract design details from Figma using MCP
-2. Apply email-safe HTML generation rules automatically
-3. Create table-based, inline-styled HTML
-4. Save to `emails/templates/` or `emails/components/`
+1. Extract/analyze design (from Figma OR image file)
+2. **Detect if you want a component or full template** (automatic)
+3. Apply email-safe HTML generation rules automatically
+4. Create table-based, inline-styled HTML
+5. Save to `emails/templates/` (full emails) or `emails/components/` (reusable parts)
+6. **AUTOMATICALLY check if DevTools MCP is available**
+7. **AUTOMATICALLY compare design vs HTML screenshots and iterate until 1:1** (if DevTools available)
+8. Report validation results with both screenshots
 
 ## How It Works
+
+### Design Input Methods
+
+The blueprint supports **two ways** to provide designs:
+
+#### 1. Figma MCP (Structured Design Data)
+```
+"Create email from this Figma design: [URL]"
+"Generate footer from selected Figma component"
+```
+- ✅ Extracts exact colors, typography, spacing
+- ✅ Structured component data
+- ✅ Highest accuracy
+- ⚠️  Requires Figma Desktop app running
+
+#### 2. Image Files (Visual Analysis)
+```
+"Create email from this design: emails/designs/footer.png"
+[Attach image] "Generate email matching this"
+```
+- ✅ Works with PNG, JPG, screenshots
+- ✅ No Figma needed
+- ✅ Analyzes visually (colors, layout, typography)
+- ✅ Great for replicating existing emails
+- ⚠️  May need refinement for exact brand colors/fonts
+
+**See:** `docs/image-based-generation.md` for complete image workflow guide
 
 ### Automatic Rule Activation
 
 The `.cursorrules` file automatically applies email-specific constraints when you:
-- Provide a Figma URL or node ID
+- Provide a Figma URL or node ID OR image file
 - Ask to "create/generate email template"
 - Mention email components (footer, header, newsletter, etc.)
 - Edit files in the `emails/` directory
+
+### Component vs Template Detection
+
+The blueprint **automatically detects** what you're creating:
+
+**Component** (no DOCTYPE, just the HTML table):
+```
+"Create an email footer" → emails/components/footer.html
+"Build a CTA button" → emails/components/cta-primary.html
+```
+Output: Just the table structure, ready to insert into templates
+
+**Full Template** (complete HTML document):
+```
+"Create a newsletter email" → emails/templates/newsletter.html
+"Generate a promotional email" → emails/templates/promo.html
+```
+Output: Complete HTML with DOCTYPE, head, body - ready to send
+
+See `docs/components-vs-templates.md` for details.
 
 ### Figma MCP Integration
 
@@ -103,6 +166,38 @@ Node ID for MCP: "1:2"
 ```
 
 Just paste the URL in your prompt - Cursor handles the conversion automatically.
+
+### Visual Validation (AUTOMATIC!)
+
+**Pixel-perfect accuracy with automatic visual validation:**
+
+After every Figma → HTML generation, Cursor **automatically**:
+1. ✅ Checks if DevTools MCP is available
+2. 📸 Captures Figma design screenshot  
+3. 🌐 Opens generated HTML in browser
+4. 📸 Captures rendered HTML screenshot
+5. 🔍 Compares both visually for differences
+6. 🔄 Iterates and fixes issues automatically (until 1:1 match)
+7. ✅ Reports final status with both screenshots
+
+**No special prompt needed** - validation runs automatically!
+
+**Example output:**
+```
+✅ Visual Validation Complete
+──────────────────────────────────────
+Figma Design:     [Screenshot shown]
+Rendered HTML:    [Screenshot shown]
+──────────────────────────────────────
+Comparison:       PERFECT MATCH ✓
+Issues Found:     0
+Iterations:       1
+Status:           Ready for production
+```
+
+**To skip validation:** Say "generate email without validation"
+
+See `docs/visual-validation-workflow.md` for complete details.
 
 ## Build Tools
 
@@ -378,8 +473,12 @@ See `CONTRIBUTING.md` for details.
 
 - **Documentation:** See `docs/` directory
 - **Example Prompts:** `docs/example-prompts.md`
+- **Image-Based Generation:** `docs/image-based-generation.md` ⭐ NEW
+- **Components vs Templates:** `docs/components-vs-templates.md` ⭐ NEW
 - **Figma MCP Guide:** `docs/figma-mcp-workflow.md`
+- **Visual Validation:** `docs/visual-validation-workflow.md` ⭐ NEW
 - **Testing Checklist:** `docs/testing-checklist.md`
+- **Email Best Practices:** `docs/email-best-practices.md`
 
 ## License
 

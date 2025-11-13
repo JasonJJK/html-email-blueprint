@@ -2,6 +2,75 @@
 
 Ready-to-use prompt templates for common email generation workflows. Copy, customize with your Figma URLs, and paste into Cursor chat.
 
+## Visual Validation (AUTOMATIC!)
+
+**Visual validation now runs AUTOMATICALLY on every Figma → HTML generation!**
+
+### Standard Generation (Validation Included)
+
+```
+Generate an email footer from this Figma design:
+https://figma.com/design/[fileKey]/[fileName]?node-id=1-2
+```
+
+```
+Create an email newsletter from Figma
+```
+
+```
+Build email header from the selected Figma component
+```
+
+**Result:** HTML generated + automatic screenshot comparison + iteration until 1:1 match!
+
+### Skip Validation (Faster Iteration)
+
+```
+Generate email footer from Figma without validation
+```
+
+```
+Create newsletter and skip validation
+```
+
+```
+Quick generation from Figma
+```
+
+**Pro tip:** Validation is automatic and ensures 1:1 accuracy. Only skip for quick iterations!
+
+## Component vs Full Template
+
+**IMPORTANT:** The system automatically detects what you're creating!
+
+### Components (No DOCTYPE - Reusable Parts)
+
+```
+"Create an email footer"
+"Build a CTA button"
+"Generate an email header component"
+"Make an email signature"
+```
+
+**Output:** Just the HTML table structure (no DOCTYPE, head, body)
+**Saved to:** `emails/components/`
+**Use:** Insert into multiple email templates
+
+### Full Templates (With DOCTYPE - Complete Emails)
+
+```
+"Create a newsletter email"
+"Generate a promotional email template"
+"Build a complete welcome email"
+"Make a full transactional email"
+```
+
+**Output:** Complete HTML document (DOCTYPE, head, body, ready to send)
+**Saved to:** `emails/templates/`
+**Use:** Send immediately
+
+**See:** `docs/components-vs-templates.md` for complete details.
+
 ## Basic Email Generation
 
 ### From Figma URL
