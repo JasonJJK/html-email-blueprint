@@ -1,0 +1,32 @@
+{
+  "name": "html-email-blueprint",
+  "version": "1.0.0",
+  "description": "Automated workflow for generating production-ready HTML email templates from Figma designs",
+  "main": "index.js",
+  "scripts": {
+    "inline": "node tools/inline-css.js",
+    "validate": "node tools/validate-email.js",
+    "test-send": "node tools/send-test.js",
+    "validate-all": "node tools/validate-email.js emails/templates/*.html emails/components/*.html"
+  },
+  "keywords": [
+    "email",
+    "html-email",
+    "figma",
+    "email-templates",
+    "mjml"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "juice": "^10.0.0",
+    "html-validate": "^8.11.1",
+    "nodemailer": "^6.9.8",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

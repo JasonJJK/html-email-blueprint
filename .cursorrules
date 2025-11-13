@@ -1,0 +1,319 @@
+# HTML Email Template Generation from Figma
+
+## Automatic Rule Activation
+
+These rules automatically apply when:
+- User provides a Figma URL or node ID
+- User requests to "create/generate email template", "build email", "design email"
+- User mentions email components: "email footer", "email header", "email newsletter", "email signature", "CTA button for email"
+- Any file is being created/edited in the `emails/` directory
+
+## Figma MCP Integration
+
+When a Figma URL or node ID is provided:
+
+1. **Extract node ID from URL**: 
+   - Pattern: `https://figma.com/design/:fileKey/:fileName?node-id=1-2`
+   - Convert `node-id=1-2` to `"1:2"` for MCP tool calls
+
+2. **Use Figma Desktop MCP tools**:
+   - `mcp_Figma_Desktop_get_design_context`: Get full design details (colors, typography, spacing, layout)
+   - `mcp_Figma_Desktop_get_screenshot`: Get visual reference
+   - `mcp_Figma_Desktop_get_variable_defs`: Extract design tokens/variables
+
+3. **Design Data Extraction**:
+   - Extract colors (hex values) for backgrounds, text, borders
+   - Extract typography (font sizes, weights, line heights)
+   - Extract spacing/padding values
+   - Extract layout dimensions and alignment
+   - Note component hierarchy for proper HTML structure
+
+4. **Transform to Email-Safe HTML**:
+   - Map Figma frames → HTML tables
+   - Map Figma text → styled `<td>` elements with inline styles
+   - Map Figma buttons → table-based button structures
+   - Map Figma auto-layout → table cell padding/spacing
+   - Convert any CSS that won't work in email clients
+
+## HTML Email Generation Rules
+
+**CRITICAL**: Every HTML email must be production-ready and compatible with:
+- Old and new Outlook (desktop + web)
+- Gmail (web + mobile)
+- Apple Mail / iOS Mail
+- Android mail clients
+- Legacy email clients
+
+### 1. Output Format
+
+Always generate a **complete HTML document**:
+- Start with `<!DOCTYPE html>`
+- Include complete `<html>`, `<head>`, and `<body>` tags
+- Self-contained: no external CSS, JS, or fonts
+- HTML only (no text version)
+- Save generated files to `emails/templates/` (full emails) or `emails/components/` (reusable parts)
+
+### 2. General Constraints
+
+**Compatibility baseline**: Assume worse than 2005 browser support
+
+**MUST USE**:
+- Table-based layout (nested `<table>`, `<tr>`, `<td>`)
+- Inline styles on every element
+- HTML attributes for styling where supported (bgcolor, width, height, align, valign)
+
+**NEVER USE**:
+- `<script>` tags or any JavaScript (onclick, onload, etc.)
+- External stylesheets (`<link rel="stylesheet">`)
+- `<div>` or modern CSS layouts (flexbox, grid)
+- `<form>`, `<input>`, `<select>`, `<textarea>`, or any form elements
+- `<video>`, `<audio>` tags (use image thumbnail with link instead)
+- `<iframe>`, `<embed>`, `<object>`
+- External resources except images (use absolute URLs for images)
+
+**Layout philosophy**:
+- Prefer single-column layouts
+- Keep structure simple and predictable
+- Avoid complex multi-column designs
+
+### 3. Required Document Structure
+
+Every email MUST follow this exact pattern:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>[Email Subject/Title]</title>
+  <style type="text/css">
+    /* Optional: Basic resets and media queries for responsive behavior */
+    body { margin: 0; padding: 0; }
+    img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    table { border-collapse: collapse; }
+    
+    /* Mobile-specific styles */
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; }
+      .mobile-padding { padding: 10px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f3f3f3;">
+  <!-- Full-width outer table -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f3f3f3">
+    <tr>
+      <td align="center">
+        <!-- 600px centered content table -->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;" class="container">
+          <!-- Content sections go here as <tr><td> blocks -->
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+```
+
+### 4. Table Structure Requirements
+
+**Every table must have**:
+- `role="presentation"` (for accessibility)
+- `cellpadding="0"` `cellspacing="0"` `border="0"` (reset defaults)
+- Explicit width in both attribute and inline style: `width="600" style="width:600px;"`
+
+**Table cells (`<td>`) must specify**:
+- All padding via inline style: `style="padding:20px;"`
+- Text alignment: `align="left"` or `align="center"` (attribute)
+- Vertical alignment: `valign="top"` or `valign="middle"` (attribute)
+- Background colors: `bgcolor="#ffffff"` (attribute) AND `style="background-color:#ffffff;"` (inline)
+
+### 5. Inline Styling Rules
+
+**All styles must be inline** on each element:
+
+```html
+<td style="font-family:Arial, sans-serif; font-size:16px; line-height:24px; color:#333333; padding:20px;">
+```
+
+**Typography styles to always include**:
+- `font-family` (with fallbacks: Arial, Helvetica, sans-serif)
+- `font-size` (in px)
+- `line-height` (in px or percentage)
+- `color` (hex values)
+- `font-weight` (if not normal)
+
+**Common inline styles**:
+- `padding` and `margin` (px values)
+- `background-color` (hex)
+- `border` (specify all: width, style, color)
+- `text-align`
+- `width` and `height` (px)
+- `display:block;` for images
+
+### 6. Images
+
+**Every `<img>` must have**:
+- `src` with absolute URL (https://)
+- `alt` attribute (required for accessibility)
+- `width` and `height` attributes (explicit dimensions)
+- `style="display:block; border:0;"` (prevent spacing issues)
+
+Example:
+```html
+<img src="https://example.com/image.jpg" alt="Description" width="600" height="300" style="display:block; width:100%; max-width:600px; height:auto; border:0;">
+```
+
+### 7. Buttons/CTAs
+
+**Use table-based buttons** (most reliable):
+
+```html
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td align="center" bgcolor="#007bff" style="border-radius:4px;">
+      <a href="https://example.com" target="_blank" style="display:inline-block; padding:12px 24px; font-family:Arial, sans-serif; font-size:16px; font-weight:bold; color:#ffffff; text-decoration:none;">
+        Click Here
+      </a>
+    </td>
+  </tr>
+</table>
+```
+
+**Button requirements**:
+- Background color on `<td>` with `bgcolor` attribute
+- Link (`<a>`) inside with `display:inline-block;`
+- All text styling on the `<a>` tag
+- `target="_blank"` for all external links
+- `text-decoration:none;` to remove underline
+
+### 8. Responsive Design
+
+**Use media queries in `<style>` block**:
+```css
+@media only screen and (max-width: 600px) {
+  .container { width: 100% !important; }
+  .mobile-padding { padding: 10px !important; }
+  .hide-mobile { display: none !important; }
+}
+```
+
+**Apply classes to tables/cells**:
+```html
+<table class="container" ...>
+<td class="mobile-padding" ...>
+```
+
+**Mobile-friendly practices**:
+- Use `max-width:600px;` on main container
+- Stack columns on mobile by using `width:100% !important;`
+- Increase touch target sizes (min 44x44px for buttons)
+
+### 9. Colors and Backgrounds
+
+**Always specify both ways**:
+```html
+<td bgcolor="#ffffff" style="background-color:#ffffff;">
+```
+
+**Use hex color codes**: #ffffff, not rgb() or color names (except basic ones)
+
+### 10. Spacing and Layout
+
+**Use table cell padding** (not margins):
+```html
+<td style="padding:30px 20px;">
+```
+
+**Vertical spacing** between sections:
+```html
+<tr>
+  <td style="height:20px; font-size:1px; line-height:1px;">&nbsp;</td>
+</tr>
+```
+
+### 11. Text Content
+
+**Use web-safe fonts**:
+- Primary: Arial, Helvetica, sans-serif
+- Alternative: Georgia, Times, serif
+- Monospace: Courier, monospace
+
+**Text in `<td>` elements**:
+```html
+<td style="font-family:Arial, sans-serif; font-size:16px; line-height:24px; color:#333333;">
+  Your text content here
+</td>
+```
+
+### 12. Testing Checklist (Post-Generation)
+
+After generating HTML email, remind user to:
+1. Run validation: `npm run validate emails/templates/[filename].html`
+2. Inline CSS if using `<style>` block: `npm run inline emails/templates/[filename].html`
+3. Send test email: `npm run test-send emails/templates/[filename].html`
+4. Test in multiple clients (Outlook, Gmail, Apple Mail)
+5. Check mobile rendering
+6. Verify all links work and open in new tabs
+
+### 13. Common Patterns
+
+**Header section**:
+```html
+<tr>
+  <td bgcolor="#ffffff" style="padding:20px 30px;">
+    <img src="https://example.com/logo.png" alt="Company Logo" width="150" height="50" style="display:block;">
+  </td>
+</tr>
+```
+
+**Content section**:
+```html
+<tr>
+  <td bgcolor="#ffffff" style="padding:30px;">
+    <h1 style="margin:0 0 20px 0; font-family:Arial, sans-serif; font-size:24px; line-height:30px; color:#333333; font-weight:bold;">
+      Headline Here
+    </h1>
+    <p style="margin:0 0 15px 0; font-family:Arial, sans-serif; font-size:16px; line-height:24px; color:#666666;">
+      Body text goes here.
+    </p>
+  </td>
+</tr>
+```
+
+**Footer section**:
+```html
+<tr>
+  <td bgcolor="#f3f3f3" style="padding:20px 30px; text-align:center;">
+    <p style="margin:0; font-family:Arial, sans-serif; font-size:12px; line-height:18px; color:#999999;">
+      &copy; 2025 Company Name. All rights reserved.<br>
+      <a href="https://example.com/unsubscribe" style="color:#999999; text-decoration:underline;">Unsubscribe</a>
+    </p>
+  </td>
+</tr>
+```
+
+## Workflow Summary
+
+1. **User provides Figma URL/node ID** → Extract design with Figma MCP tools
+2. **Analyze design data** → Extract colors, fonts, spacing, layout structure
+3. **Generate HTML email** → Follow all rules above, use table-based structure
+4. **Save to appropriate directory** → `emails/templates/` or `emails/components/`
+5. **Remind user to validate and test** → Run npm scripts for validation/testing
+
+## File Naming Convention
+
+- Full templates: `emails/templates/[purpose]-[date].html` (e.g., `newsletter-2025-01.html`)
+- Components: `emails/components/[component-name].html` (e.g., `header-brand.html`, `footer-standard.html`)
+- Use lowercase, hyphens for spaces
+
+## Remember
+
+- **Email HTML is not web HTML** - it's a constrained, compatibility-focused format
+- **When in doubt, use tables** - they're the most reliable structure
+- **Inline everything** - no external dependencies
+- **Test in real email clients** - rendering varies wildly
+- **Keep it simple** - complex designs often break in email clients
+
